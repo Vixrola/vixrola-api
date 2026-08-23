@@ -6,176 +6,112 @@ from urllib.parse import urlparse
 app = Flask(__name__)
 CORS(app)
 
-SUPPORTED_HOSTS = {
-    "instagram.com",
-    "www.instagram.com",
-    "m.instagram.com",
-    "facebook.com",
-    "www.facebook.com",
-    "m.facebook.com",
-    "fb.watch",
+DOMAINS = {
+"facebook.com","fb.watch","instagram.com","youtube.com","youtu.be",
+"tiktok.com","x.com","twitter.com","snapchat.com","telegram.me","t.me",
+"telegram.org","pinterest.com","pin.it","linkedin.com","reddit.com",
+"redd.it","threads.net","discord.com","discord.gg","tumblr.com","vimeo.com",
+"dailymotion.com","dai.ly","twitch.tv","likee.video","kwai.com",
+"kwai-video.com","rumble.com","bilibili.com","b23.tv","triller.co",
+"mojapp.in","joshapp.com","chingari.io","sharechat.com","kooapp.com",
+"roposo.com","public.com","mitron.tv"
 }
 
-def is_supported_url(url: str) -> bool:
+def host(url):
     try:
-        host = urlparse(url).netloc.lower().split(":")[0]
-        return host in SUPPORTED_HOSTS or host.endswith(".facebook.com")
+        return urlparse(url).netloc.lower().split(":")[0].removeprefix("www.")
     except Exception:
-        return False
+        return ""
 
-def media_type(item):
-    """Return a frontend-friendly media type."""
-    ext = (item.get("ext") or "").lower()
-    url = (item.get("url") or "").lower()
-    mime = (item.get("mime_type") or "").lower()
+def allowed(url):
+    h = host(url)
+    return any(h == d or h.endswith("." + d) for d in DOMAINS)
 
-    if mime.startswith("image/") or ext in {"jpg", "jpeg", "png", "webp", "gif"}:
+def kind(x):
+    mime = (x.get("mime_type") or "").lower()
+    ext = (x.get("ext") or "").lower()
+    u = (x.get("url") or "").lower()
+    if mime.startswith("image/") or ext in {"jpg","jpeg","png","webp","gif"}:
         return "photo"
-    if mime.startswith("video/") or ext in {"mp4", "mov", "webm", "m4v"}:
-        return "video"
-    if ".m3u8" in url or "m3u8" in mime:
+    if mime.startswith("video/") or ext in {"mp4","webm","mov","m4v","flv"} or ".m3u8" in u:
         return "video"
     return "media"
 
-def clean_media(item):
-    url = item.get("url")
-    if not url:
+def clean(x):
+    if not isinstance(x, dict) or not x.get("url"):
         return None
+    return {"type":kind(x),"url":x["url"],"ext":x.get("ext"),
+            "mime_type":x.get("mime_type"),"width":x.get("width"),
+            "height":x.get("height")}
 
-    return {
-        "type": media_type(item),
-        "url": url,
-        "ext": item.get("ext"),
-        "mime_type": item.get("mime_type"),
-        "width": item.get("width"),
-        "height": item.get("height"),
-        "title": item.get("title") or item.get("description") or "Media",
-    }
-
-def collect_media(info):
-    """
-    Collect direct media URLs from a yt-dlp result.
-    Handles normal posts and multi-item/carousel results.
-    """
-    media = []
-
-    def walk(item):
-        if not isinstance(item, dict):
-            return
-
-        # Prefer the extracted direct URL.
-        candidate = clean_media(item)
-        if candidate:
-            media.append(candidate)
-
-        # Carousel / playlist / multi-media result.
-        for child in item.get("entries") or []:
-            walk(child)
-
+def collect(info):
+    result = []
+    def walk(x):
+        if not isinstance(x, dict): return
+        item = clean(x)
+        if item: result.append(item)
+        for child in x.get("entries") or []: walk(child)
     walk(info)
-
-    # Remove duplicate URLs while keeping order.
-    unique = []
     seen = set()
-    for item in media:
+    unique = []
+    for item in result:
         if item["url"] not in seen:
-            seen.add(item["url"])
-            unique.append(item)
-
+            seen.add(item["url"]); unique.append(item)
     return unique
 
-@app.route("/", methods=["GET"])
+@app.get("/")
 def home():
-    return jsonify({
-        "status": "online",
-        "message": "VixRola API is running!",
-        "version": "2.0"
-    })
+    return jsonify({"status":"online","service":"VixRola Universal Media API","engine":"yt-dlp"})
 
-@app.route("/health", methods=["GET"])
+@app.get("/health")
 def health():
-    return jsonify({"status": "ok"})
+    return jsonify({"status":"ok"})
 
-@app.route("/download", methods=["GET", "POST"])
+@app.route("/download", methods=["GET","POST"])
 def download():
     url = request.args.get("url")
-
     if not url and request.is_json:
-        data = request.get_json(silent=True) or {}
-        url = data.get("url")
-
+        url = (request.get_json(silent=True) or {}).get("url")
     if not url:
-        return jsonify({
-            "status": "error",
-            "message": "Please provide a valid Instagram or Facebook URL."
-        }), 400
+        return jsonify({"status":"error","message":"URL is required."}), 400
+    if not allowed(url):
+        return jsonify({"status":"error","message":"This domain is not enabled."}), 400
 
-    if not is_supported_url(url):
-        return jsonify({
-            "status": "error",
-            "message": "Only Instagram and Facebook URLs are supported."
-        }), 400
-
-    # Best available single media. For images this allows the extractor
-    # to return the image URL instead of forcing a video-only format.
-    ydl_opts = {
-        "quiet": True,
-        "no_warnings": True,
-        "skip_download": True,
-        "noplaylist": False,
-        "extract_flat": False,
-        "format": "best",
+    opts = {
+        "quiet": True, "no_warnings": True, "skip_download": True,
+        "noplaylist": False, "extract_flat": False, "format": "best"
     }
-
     try:
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        with yt_dlp.YoutubeDL(opts) as ydl:
             info = ydl.extract_info(url, download=False)
-
-        media = collect_media(info)
-
+        media = collect(info)
         if not media:
             return jsonify({
-                "status": "error",
-                "message": (
-                    "No downloadable public media was found. "
-                    "The post may be private, login-required, expired, "
-                    "or unsupported by the current extractor."
-                )
-            }), 404
-
-        videos = [m for m in media if m["type"] == "video"]
-        photos = [m for m in media if m["type"] == "photo"]
-
-        # Backward-compatible response: download_url remains available.
-        first = media[0]
-
+                "status":"error",
+                "message":"No accessible media was returned by yt-dlp. "
+                         "The URL may be private, login-required, expired, "
+                         "rate-limited, DRM-protected, or unsupported."
+            }), 422
         return jsonify({
-            "status": "success",
-            "title": info.get("title") or info.get("description") or "Media",
-            "media_type": first["type"],
-            "download_url": first["url"],
-            "media": media,
-            "count": len(media),
-            "video_count": len(videos),
-            "photo_count": len(photos),
+            "status":"success",
+            "platform":host(url),
+            "title":info.get("title") or info.get("description") or "Media",
+            "media_type":media[0]["type"],
+            "download_url":media[0]["url"],
+            "media":media,
+            "count":len(media)
         })
-
     except yt_dlp.utils.DownloadError as e:
         return jsonify({
-            "status": "error",
-            "message": (
-                "This URL could not be extracted. It may be private, "
-                "login-required, expired, rate-limited, or unsupported. "
-                f"Details: {str(e)}"
-            )
+            "status":"error",
+            "message":"yt-dlp could not extract this URL. The site or content "
+                     "may currently require authentication or may be unsupported.",
+            "details":str(e)
         }), 422
     except Exception as e:
-        app.logger.exception("Download endpoint failed")
-        return jsonify({
-            "status": "error",
-            "message": "The server could not process this URL.",
-            "details": str(e)
-        }), 500
+        app.logger.exception("Extraction failed")
+        return jsonify({"status":"error","message":"Extraction failed.",
+                        "details":str(e)}), 500
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
