@@ -58,7 +58,9 @@ def extract_media(info):
     for f in formats:
         if not isinstance(f, dict):
             continue
-        if not f.get("url") or not is_video(f):
+        if not f.get("url"):
+            continue
+        if not is_video(f):
             continue
         found.append({
             "type": "video",
@@ -135,6 +137,13 @@ def download():
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
+
+        # Telegram sometimes returns a formats array containing None values.
+        # Normalize only Telegram responses; all other platforms keep the same path.
+        if host(url) in {"t.me", "telegram.me", "telegram.org"} and isinstance(info, dict):
+            formats = info.get("formats")
+            if isinstance(formats, list):
+                info["formats"] = [f for f in formats if isinstance(f, dict)]
 
         media = extract_media(info)
 
