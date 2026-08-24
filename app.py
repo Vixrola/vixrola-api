@@ -56,6 +56,8 @@ def extract_media(info):
     found = []
 
     for f in formats:
+        if not isinstance(f, dict):
+            continue
         if not f.get("url") or not is_video(f):
             continue
         found.append({
@@ -123,7 +125,7 @@ def download():
         return jsonify(status="error", message="This domain is not enabled."), 400
 
     ydl_opts = {
-        "format": "best",
+        "format": "bestvideo*+bestaudio/best",
         "quiet": True,
         "no_warnings": True,
         "skip_download": True,
