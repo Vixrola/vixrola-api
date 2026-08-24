@@ -3,7 +3,7 @@ from flask_cors import CORS
 import yt_dlp
 from urllib.parse import urlparse
 app=Flask(__name__); CORS(app)
-DOMAINS={"facebook.com","fb.watch","instagram.com","youtube.com","youtu.be","tiktok.com","x.com","twitter.com","snapchat.com","telegram.me","t.me","telegram.org","pinterest.com","pin.it","linkedin.com","reddit.com","redd.it","threads.net","threads.com","discord.com","discord.gg","tumblr.com","vimeo.com","dailymotion.com","dai.ly","likee.video","kwai.com","kwai-video.com","rumble.com","bilibili.com","b23.tv","triller.co","mojapp.in","joshapp.com","joshapp.in","myjosh.in","joshapp.net","chingari.io","sharechat.com","kooapp.com","roposo.com","public.com","mitron.tv"}
+DOMAINS={"facebook.com","fb.watch","instagram.com","youtube.com","youtu.be","tiktok.com","x.com","twitter.com","snapchat.com","telegram.me","t.me","telegram.org","pinterest.com","pin.it","linkedin.com","reddit.com","redd.it","threads.net","threads.com","discord.com","discord.gg","tumblr.com","vimeo.com","dailymotion.com","dai.ly","likee.video","kwai.com","kwai-video.com","rumble.com","bilibili.com","b23.tv","triller.co","mojapp.in","joshapp.com","joshapp.in","myjosh.in","joshapp.net","share.myjosh.in","chingari.io","sharechat.com","kooapp.com","roposo.com","public.com","mitron.tv"}
 def host(u):
     try:return urlparse(u).netloc.lower().split(':')[0].removeprefix('www.')
     except:return ''
@@ -11,7 +11,7 @@ def allowed(u):
     h=host(u); return any(h==d or h.endswith('.'+d) for d in DOMAINS)
 def kind(x):
     mime=(x.get('mime_type') or '').lower(); ext=(x.get('ext') or '').lower(); u=(x.get('url') or '').lower()
-    if mime.startswith('video/') or ext in {'mp4','webm','mov','m4v','flv','mkv'} or '.m3u8' in u:return 'video'
+    if (mime.startswith('video/') or ext in {'mp4','webm','mov','m4v','flv','mkv','ts'} or '.m3u8' in u or '.mp4' in u or 'video.twimg.com/' in u or 'cdninstagram.com/' in u or 'fbcdn.net/' in u or 'pinimg.com/videos/' in u or 'v.redd.it/' in u or 'sc-cdn.net/' in u or 'telesco.pe/' in u or 'licdn.com/' in u or 'myjosh.in/' in u or 'mojapp.in/' in u or 'sharechat.com/' in u):return 'video'
     if mime.startswith('image/') or ext in {'jpg','jpeg','png','webp','gif','avif'}:return 'photo'
     return 'media'
 def collect(info):
