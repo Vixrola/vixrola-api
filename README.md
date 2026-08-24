@@ -1,0 +1,1 @@
+VixRola Universal yt-dlp API v2. The format='best' restriction was removed because Pinterest/Reddit may not expose a format named best. Private, login-required, DRM or restricted content is not bypassed.
