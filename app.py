@@ -6,393 +6,138 @@ from urllib.parse import urlparse
 app = Flask(__name__)
 CORS(app)
 
-# Supported public video domains
 DOMAINS = {
-    "facebook.com",
-    "fb.watch",
-
-    "instagram.com",
-
-    "youtube.com",
-    "youtu.be",
-
-    "tiktok.com",
-
-    "x.com",
-    "twitter.com",
-
-    "snapchat.com",
-
-    "telegram.me",
-    "t.me",
-    "telegram.org",
-
-    "pinterest.com",
-    "pin.it",
-
-    "linkedin.com",
-
-    "reddit.com",
-    "redd.it",
-
-    # Threads
-    "threads.net",
-    "threads.com",
-
-    "tumblr.com",
-
-    "vimeo.com",
-
-    "dailymotion.com",
-    "dai.ly",
-
-    "likee.video",
-
-    "kwai.com",
-    "kwai-video.com",
-
-    "rumble.com",
-
-    "bilibili.com",
-    "b23.tv",
-
-    "triller.co",
-
-    "mojapp.in",
-
-    # Josh
-    "joshapp.com",
-    "joshapp.in",
-    "myjosh.in",
-    "joshapp.net",
-    "myjosh.in",
-
-    "chingari.io",
-
-    "sharechat.com",
-
-    "kooapp.com",
-
-    "roposo.com",
-
-    "public.com",
-
-    "mitron.tv",
+    "facebook.com","fb.watch","instagram.com","youtube.com","youtu.be",
+    "tiktok.com","x.com","twitter.com","snapchat.com",
+    "telegram.me","t.me","telegram.org","pinterest.com","pin.it",
+    "linkedin.com","reddit.com","redd.it",
+    "threads.net","threads.com",
+    "tumblr.com","vimeo.com","dailymotion.com","dai.ly",
+    "likee.video","kwai.com","kwai-video.com","rumble.com",
+    "bilibili.com","b23.tv","triller.co","mojapp.in",
+    "joshapp.com","joshapp.in","myjosh.in","joshapp.net",
+    "chingari.io","sharechat.com","kooapp.com","roposo.com",
+    "public.com","mitron.tv"
 }
 
-
-def get_host(url):
+def host(url):
     try:
-        return (
-            urlparse(url)
-            .netloc
-            .lower()
-            .split(":")[0]
-            .removeprefix("www.")
-        )
+        return urlparse(url).netloc.lower().split(":")[0].removeprefix("www.")
     except Exception:
         return ""
 
+def allowed(url):
+    h = host(url)
+    return any(h == d or h.endswith("." + d) for d in DOMAINS)
 
-def is_allowed(url):
-    host = get_host(url)
-
-    return any(
-        host == domain or host.endswith("." + domain)
-        for domain in DOMAINS
-    )
-
-
-def get_media_type(media):
-    mime = (media.get("mime_type") or "").lower()
-    ext = (media.get("ext") or "").lower()
-    url = (media.get("url") or "").lower()
-
-    # Video
-    if (
-        mime.startswith("video/")
-        or ext in {
-            "mp4",
-            "webm",
-            "mov",
-            "m4v",
-            "flv",
-            "mkv",
-        }
-        or ".m3u8" in url
-    ):
+def kind(x):
+    mime = (x.get("mime_type") or "").lower()
+    ext = (x.get("ext") or "").lower()
+    u = (x.get("url") or "").lower()
+    if mime.startswith("video/") or ext in {"mp4","webm","mov","m4v","flv","mkv"} or ".m3u8" in u:
         return "video"
-
-    # Photo
-    if (
-        mime.startswith("image/")
-        or ext in {
-            "jpg",
-            "jpeg",
-            "png",
-            "webp",
-            "gif",
-            "avif",
-        }
-    ):
+    if mime.startswith("image/") or ext in {"jpg","jpeg","png","webp","gif","avif"}:
         return "photo"
-
     return "media"
 
-
-def collect_media(info):
-    results = []
-
-    def walk(item):
-
-        if not isinstance(item, dict):
+def collect(info):
+    found = []
+    def walk(x):
+        if not isinstance(x, dict):
             return
-
-        if item.get("url"):
-
-            results.append(
-                {
-                    "type": get_media_type(item),
-                    "url": item["url"],
-                    "ext": item.get("ext"),
-                    "format_id": item.get("format_id"),
-                    "mime_type": item.get("mime_type"),
-                    "width": item.get("width"),
-                    "height": item.get("height"),
-                }
-            )
-
-        for entry in item.get("entries") or []:
-            walk(entry)
-
+        if x.get("url"):
+            found.append({
+                "type": kind(x),
+                "url": x["url"],
+                "ext": x.get("ext"),
+                "format_id": x.get("format_id"),
+                "mime_type": x.get("mime_type"),
+                "width": x.get("width"),
+                "height": x.get("height")
+            })
+        for y in x.get("entries") or []:
+            walk(y)
     walk(info)
+    seen, out = set(), []
+    for m in found:
+        if m["url"] not in seen:
+            seen.add(m["url"])
+            out.append(m)
+    return out
 
-    # Remove duplicate URLs
-    seen = set()
-    unique = []
-
-    for media in results:
-
-        url = media["url"]
-
-        if url not in seen:
-            seen.add(url)
-            unique.append(media)
-
-    return unique
-
-
-def extract_video(url):
-
-    options = {
+def yt_extract(url):
+    opts = {
         "quiet": True,
         "no_warnings": True,
-
-        # Extraction only
         "skip_download": True,
-
         "extract_flat": False,
-
         "noplaylist": False,
-
         "socket_timeout": 30,
-
         "retries": 2,
     }
-
-    with yt_dlp.YoutubeDL(options) as ydl:
-
-        return ydl.extract_info(
-            url,
-            download=False
-        )
-
+    with yt_dlp.YoutubeDL(opts) as y:
+        return y.extract_info(url, download=False)
 
 @app.get("/")
 def home():
-
-    return jsonify(
-        status="online",
-        service="VixRola Universal Video API",
-        version="5",
-        engine="yt-dlp"
-    )
-
+    return jsonify(status="online", service="VixRola Universal Video API", version="5", engine="yt-dlp")
 
 @app.get("/health")
 def health():
+    return jsonify(status="ok", version="5")
 
-    return jsonify(
-        status="ok",
-        version="5"
-    )
-
-
-@app.route(
-    "/download",
-    methods=["GET", "POST"]
-)
+@app.route("/download", methods=["GET","POST"])
 def download():
-
-    # GET
     url = request.args.get("url")
-
-    # POST JSON
     if not url and request.is_json:
+        url = (request.get_json(silent=True) or {}).get("url")
 
-        data = request.get_json(
-            silent=True
-        ) or {}
-
-        url = data.get("url")
-
-    # Missing URL
     if not url:
+        return jsonify(status="error", message="URL is required."), 400
+    if not allowed(url):
+        return jsonify(status="error", message="This domain is not enabled."), 400
 
-        return jsonify(
-            status="error",
-            message="URL is required."
-        ), 400
-
-    # Domain check
-    if not is_allowed(url):
-
-        return jsonify(
-            status="error",
-            message="This domain is not enabled."
-        ), 400
-
-    platform = get_host(url)
+    h = host(url)
 
     try:
-
-        info = extract_video(url)
-
-        media = collect_media(info)
-
-        # VIDEO ONLY
-        videos = [
-            item
-            for item in media
-            if item["type"] == "video"
-        ]
+        info = yt_extract(url)
+        media = collect(info)
+        videos = [m for m in media if m["type"] == "video"]
 
         if not videos:
+            return jsonify(status="error", platform=h,
+                           message="No accessible video media was returned by yt-dlp."), 422
 
-            return jsonify(
-                status="error",
-                platform=platform,
-                message=(
-                    "No accessible video media "
-                    "was returned by yt-dlp."
-                )
-            ), 422
+        def score(m):
+            u = m["url"].lower()
+            s = 0
+            if m.get("ext") == "mp4": s += 50
+            if ".m3u8" not in u: s += 20
+            if m.get("height"):
+                try: s += min(int(m["height"]), 2160) / 1000
+                except: pass
+            return s
 
-        # Prefer direct MP4
-        def video_score(item):
-
-            score = 0
-
-            ext = (
-                item.get("ext") or ""
-            ).lower()
-
-            media_url = (
-                item.get("url") or ""
-            ).lower()
-
-            # MP4 preferred
-            if ext == "mp4":
-                score += 100
-
-            # Direct file preferred over HLS
-            if ".m3u8" not in media_url:
-                score += 30
-
-            # Prefer higher resolution
-            height = item.get("height")
-
-            if height:
-
-                try:
-
-                    score += min(
-                        int(height),
-                        2160
-                    ) / 10
-
-                except Exception:
-                    pass
-
-            return score
-
-        videos.sort(
-            key=video_score,
-            reverse=True
-        )
-
-        best_video = videos[0]
+        videos.sort(key=score, reverse=True)
 
         return jsonify(
-
             status="success",
-
-            platform=platform,
-
-            title=(
-                info.get("title")
-                or info.get("description")
-                or "Video"
-            ),
-
+            platform=h,
+            title=info.get("title") or info.get("description") or "Video",
             media_type="video",
-
-            download_url=best_video["url"],
-
+            download_url=videos[0]["url"],
             media=videos,
-
             count=len(videos)
         )
 
-    except yt_dlp.utils.DownloadError as error:
-
-        return jsonify(
-
-            status="error",
-
-            platform=platform,
-
-            message=(
-                "yt-dlp could not "
-                "extract this video."
-            ),
-
-            details=str(error)
-
-        ), 422
-
-    except Exception as error:
-
-        app.logger.exception(
-            "Video extraction failed"
-        )
-
-        return jsonify(
-
-            status="error",
-
-            platform=platform,
-
-            message="Extraction failed.",
-
-            details=str(error)
-
-        ), 500
-
+    except yt_dlp.utils.DownloadError as e:
+        return jsonify(status="error", platform=h,
+                       message="yt-dlp could not extract this video.",
+                       details=str(e)), 422
+    except Exception as e:
+        app.logger.exception("Extraction failed")
+        return jsonify(status="error", platform=h,
+                       message="Extraction failed.", details=str(e)), 500
 
 if __name__ == "__main__":
-
-    app.run(
-        host="0.0.0.0",
-        port=5000
-    )
+    app.run(host="0.0.0.0", port=5000)
