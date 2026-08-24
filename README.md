@@ -1,1 +1,6 @@
-VixRola Universal yt-dlp API v2. The format='best' restriction was removed because Pinterest/Reddit may not expose a format named best. Private, login-required, DRM or restricted content is not bypassed.
+VixRola Universal Video API V4
+Threads: threads.net and threads.com enabled.
+Josh: common public Josh domains enabled.
+Video-only responses. No watermark processing.
+Direct MP4 preferred when available; HLS/DASH retained when needed.
+Does not bypass private, login-required, DRM, or access-controlled content.
