@@ -3,7 +3,7 @@ from flask_cors import CORS
 import yt_dlp
 from urllib.parse import urlparse
 app=Flask(__name__); CORS(app)
-DOMAINS={"facebook.com","fb.watch","instagram.com","x.com","twitter.com","pinterest.com","pin.it","reddit.com","redd.it","snapchat.com","telegram.me","t.me","telegram.org","linkedin.com","mojapp.in","joshapp.com","joshapp.in","myjosh.in","joshapp.net","share.myjosh.in"}
+DOMAINS={"facebook.com","fb.watch","instagram.com","youtube.com","youtu.be","tiktok.com","x.com","twitter.com","snapchat.com","telegram.me","t.me","telegram.org","pinterest.com","pin.it","linkedin.com","reddit.com","redd.it","threads.net","threads.com","discord.com","discord.gg","tumblr.com","vimeo.com","dailymotion.com","dai.ly","likee.video","kwai.com","kwai-video.com","rumble.com","bilibili.com","b23.tv","triller.co","mojapp.in","joshapp.com","joshapp.in","myjosh.in","joshapp.net","chingari.io","sharechat.com","kooapp.com","roposo.com","public.com","mitron.tv"}
 def host(u):
     try:return urlparse(u).netloc.lower().split(':')[0].removeprefix('www.')
     except:return ''
