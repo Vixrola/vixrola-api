@@ -6,15 +6,19 @@ from urllib.parse import urlparse
 app = Flask(__name__)
 CORS(app)
 
+# Only the 10 platforms that were actually tested successfully.
 DOMAINS = {
-"facebook.com","fb.watch","instagram.com","youtube.com","youtu.be",
-"tiktok.com","x.com","twitter.com","snapchat.com","telegram.me","t.me",
-"telegram.org","pinterest.com","pin.it","linkedin.com","reddit.com",
-"redd.it","threads.net","discord.com","discord.gg","tumblr.com","vimeo.com",
-"dailymotion.com","dai.ly","twitch.tv","likee.video","kwai.com",
-"kwai-video.com","rumble.com","bilibili.com","b23.tv","triller.co",
-"mojapp.in","joshapp.com","chingari.io","sharechat.com","kooapp.com",
-"roposo.com","public.com","mitron.tv"
+    "instagram.com",
+    "facebook.com", "fb.watch",
+    "x.com", "twitter.com",
+    "pinterest.com", "pin.it",
+    "reddit.com", "redd.it",
+    "snapchat.com",
+    "telegram.me", "t.me", "telegram.org",
+    "linkedin.com",
+    "mojapp.in",
+    "joshapp.com", "joshapp.in", "myjosh.in",
+    "share.myjosh.in",
 }
 
 def host(url):
@@ -27,91 +31,161 @@ def allowed(url):
     h = host(url)
     return any(h == d or h.endswith("." + d) for d in DOMAINS)
 
-def kind(x):
-    mime = (x.get("mime_type") or "").lower()
-    ext = (x.get("ext") or "").lower()
-    u = (x.get("url") or "").lower()
-    if mime.startswith("image/") or ext in {"jpg","jpeg","png","webp","gif"}:
-        return "photo"
-    if mime.startswith("video/") or ext in {"mp4","webm","mov","m4v","flv"} or ".m3u8" in u:
-        return "video"
-    return "media"
+def is_video(f):
+    if not isinstance(f, dict):
+        return False
+    vcodec = f.get("vcodec")
+    if vcodec and vcodec != "none":
+        return True
+    mime = (f.get("mime_type") or "").lower()
+    if mime.startswith("video/"):
+        return True
+    ext = (f.get("ext") or "").lower()
+    if ext in {"mp4", "webm", "mov", "m4v", "mkv", "flv", "ts"}:
+        return True
+    u = (f.get("url") or "").lower()
+    return ".m3u8" in u or any(x in u for x in (
+        "video.twimg.com/", "v.redd.it/", "pinimg.com/videos/",
+        "cdninstagram.com/", "fbcdn.net/", "sc-cdn.net/",
+        "telesco.pe/", "licdn.com/", "myjosh.in/",
+        "share.myjosh.in/", "mojapp.in/"
+    ))
 
-def clean(x):
-    if not isinstance(x, dict) or not x.get("url"):
-        return None
-    return {"type":kind(x),"url":x["url"],"ext":x.get("ext"),
-            "mime_type":x.get("mime_type"),"width":x.get("width"),
-            "height":x.get("height")}
+def extract_media(info):
+    formats = info.get("formats") or []
+    found = []
 
-def collect(info):
-    result = []
-    def walk(x):
-        if not isinstance(x, dict): return
-        item = clean(x)
-        if item: result.append(item)
-        for child in x.get("entries") or []: walk(child)
-    walk(info)
-    seen = set()
-    unique = []
-    for item in result:
+    for f in formats:
+        if not f.get("url") or not is_video(f):
+            continue
+        found.append({
+            "type": "video",
+            "url": f["url"],
+            "ext": f.get("ext"),
+            "format_id": f.get("format_id"),
+            "mime_type": f.get("mime_type"),
+            "width": f.get("width"),
+            "height": f.get("height"),
+        })
+
+    direct = info.get("url")
+    if direct and not found:
+        f = {
+            "url": direct,
+            "ext": info.get("ext"),
+            "format_id": info.get("format_id"),
+            "mime_type": info.get("mime_type"),
+            "vcodec": info.get("vcodec"),
+        }
+        if is_video(f):
+            found.append({
+                "type": "video",
+                "url": direct,
+                "ext": f.get("ext"),
+                "format_id": f.get("format_id"),
+                "mime_type": f.get("mime_type"),
+                "width": info.get("width"),
+                "height": info.get("height"),
+            })
+
+    # De-duplicate
+    unique, seen = [], set()
+    for item in found:
         if item["url"] not in seen:
-            seen.add(item["url"]); unique.append(item)
+            seen.add(item["url"])
+            unique.append(item)
+
     return unique
 
 @app.get("/")
 def home():
-    return jsonify({"status":"online","service":"VixRola Universal Media API","engine":"yt-dlp"})
+    return jsonify(status="online", message="VixRola API is running!", version="4")
 
 @app.get("/health")
 def health():
-    return jsonify({"status":"ok"})
+    return jsonify(
+        status="ok",
+        version="4",
+        yt_dlp_version=yt_dlp.version.__version__
+    )
 
-@app.route("/download", methods=["GET","POST"])
+@app.route("/download", methods=["GET", "POST"])
 def download():
     url = request.args.get("url")
     if not url and request.is_json:
-        url = (request.get_json(silent=True) or {}).get("url")
-    if not url:
-        return jsonify({"status":"error","message":"URL is required."}), 400
-    if not allowed(url):
-        return jsonify({"status":"error","message":"This domain is not enabled."}), 400
+        data = request.get_json(silent=True) or {}
+        url = data.get("url")
 
-    opts = {
-        "quiet": True, "no_warnings": True, "skip_download": True,
-        "noplaylist": False, "extract_flat": False, "format": "best"
+    if not url:
+        return jsonify(status="error", message="Please provide a valid URL"), 400
+
+    if not allowed(url):
+        return jsonify(status="error", message="This domain is not enabled."), 400
+
+    ydl_opts = {
+        "format": "best",
+        "quiet": True,
+        "no_warnings": True,
+        "skip_download": True,
+        "noplaylist": True,
     }
+
     try:
-        with yt_dlp.YoutubeDL(opts) as ydl:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
-        media = collect(info)
+
+        media = extract_media(info)
+
+        # If yt-dlp selected a direct video URL, preserve it exactly.
+        if not media and info.get("url"):
+            media = [{
+                "type": "video",
+                "url": info["url"],
+                "ext": info.get("ext"),
+                "format_id": info.get("format_id"),
+                "mime_type": info.get("mime_type"),
+                "width": info.get("width"),
+                "height": info.get("height"),
+            }]
+
         if not media:
-            return jsonify({
-                "status":"error",
-                "message":"No accessible media was returned by yt-dlp. "
-                         "The URL may be private, login-required, expired, "
-                         "rate-limited, DRM-protected, or unsupported."
-            }), 422
-        return jsonify({
-            "status":"success",
-            "platform":host(url),
-            "title":info.get("title") or info.get("description") or "Media",
-            "media_type":media[0]["type"],
-            "download_url":media[0]["url"],
-            "media":media,
-            "count":len(media)
-        })
-    except yt_dlp.utils.DownloadError as e:
-        return jsonify({
-            "status":"error",
-            "message":"yt-dlp could not extract this URL. The site or content "
-                     "may currently require authentication or may be unsupported.",
-            "details":str(e)
-        }), 422
+            return jsonify(
+                status="error",
+                platform=host(url),
+                message="No accessible video media was returned by yt-dlp."
+            ), 422
+
+        def score(x):
+            s = 0
+            if (x.get("ext") or "").lower() == "mp4":
+                s += 100
+            if ".m3u8" not in (x.get("url") or "").lower():
+                s += 20
+            try:
+                s += min(int(x.get("height") or 0), 2160) / 10
+            except Exception:
+                pass
+            return s
+
+        media.sort(key=score, reverse=True)
+
+        return jsonify(
+            status="success",
+            title=info.get("title", "Video"),
+            platform=host(url),
+            media_type="video",
+            download_url=media[0]["url"],
+            media=media,
+            count=len(media)
+        )
+
     except Exception as e:
-        app.logger.exception("Extraction failed")
-        return jsonify({"status":"error","message":"Extraction failed.",
-                        "details":str(e)}), 500
+        return jsonify(
+            status="error",
+            platform=host(url),
+            message="yt-dlp could not extract this video.",
+            details=str(e)
+        ), 422
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
