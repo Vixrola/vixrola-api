@@ -1,4 +1,4 @@
-Flask
-flask-cors
-yt-dlp
-gunicorn
+fastapi
+uvicorn[standard]
+yt-dlp>=2024.10.0
+pydantic
