@@ -49,9 +49,11 @@ def extract_video_info(url: str):
         'no_warnings': True,
         'nocheckcertificate': True,
         'geo_bypass': True,
+        'format': 'all',  # फॉर्मेट एरर को हमेशा के लिए बंद करने के लिए
+        'allow_unplayable_formats': True,
         'extractor_args': {
             'youtube': {
-                'player_client': ['ios', 'tv_embedded']
+                'player_client': ['android', 'ios', 'tv']
             }
         }
     }
@@ -66,17 +68,22 @@ def extract_video_info(url: str):
             download_url = None
             formats = info.get('formats', [])
             
-            # Progressive MP4 (Audio + Video)
+            # 1. वीडियो + ऑडियो दोनों वाला लिंक ढूँढें
             for f in reversed(formats):
                 if f.get('url') and f.get('vcodec') != 'none' and f.get('acodec') != 'none':
                     download_url = f.get('url')
                     break
             
+            # 2. अगर कंबाइंड न मिले तो सबसे बेस्ट वीडियो स्ट्रीम
             if not download_url:
                 for f in reversed(formats):
-                    if f.get('url'):
+                    if f.get('url') and f.get('vcodec') != 'none':
                         download_url = f.get('url')
                         break
+
+            # 3. फॉलबैक
+            if not download_url and formats:
+                download_url = formats[-1].get('url')
 
             if not download_url:
                 download_url = info.get('url') or info.get('webpage_url')
