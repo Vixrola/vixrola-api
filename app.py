@@ -51,7 +51,7 @@ def extract_video_info(url: str):
         'geo_bypass': True,
         'extractor_args': {
             'youtube': {
-                'player_client': ['android', 'tv'],
+                'player_client': ['android_vr', 'tv_embedded', 'web_embedded', 'ios'],
                 'player_skip': ['webpage', 'configs']
             }
         }
@@ -67,7 +67,7 @@ def extract_video_info(url: str):
             download_url = None
             formats = info.get('formats', [])
             
-            # बेस्ट MP4 डाउनलोड लिंक ढूँढें
+            # बेस्ट MP4 (Audio + Video) निकालना
             for f in reversed(formats):
                 if f.get('url') and f.get('vcodec') != 'none' and f.get('acodec') != 'none':
                     download_url = f.get('url')
