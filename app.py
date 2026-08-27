@@ -49,10 +49,9 @@ def extract_video_info(url: str):
         'no_warnings': True,
         'nocheckcertificate': True,
         'geo_bypass': True,
-        'format': 'best/bestvideo+bestaudio/any',
         'extractor_args': {
             'youtube': {
-                'player_client': ['tv', 'ios', 'android', 'web']
+                'player_client': ['tv', 'web_creator', 'ios', 'android']
             }
         }
     }
@@ -62,28 +61,27 @@ def extract_video_info(url: str):
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            # extract_flat=False ensures all formats & direct URLs are extracted
+            # download=False ensures format parsing doesn't crash on strict format rules
             info = ydl.extract_info(url, download=False)
             
+            download_url = None
             formats = info.get('formats', [])
-            download_url = info.get('url')
-
-            # 1. Look for progressive mp4 (video + audio combined)
+            
+            # Best Progressive MP4 (Audio + Video)
+            for f in reversed(formats):
+                if f.get('url') and f.get('vcodec') != 'none' and f.get('acodec') != 'none':
+                    download_url = f.get('url')
+                    break
+            
+            # Fallback to any valid direct stream URL
             if not download_url:
-                for f in reversed(formats):
-                    if f.get('url') and f.get('vcodec') != 'none' and f.get('acodec') != 'none':
-                        download_url = f.get('url')
-                        break
-
-            # 2. Fallback to any working direct stream URL
-            if not download_url and formats:
                 for f in reversed(formats):
                     if f.get('url'):
                         download_url = f.get('url')
                         break
 
             if not download_url:
-                download_url = info.get('webpage_url', url)
+                download_url = info.get('url') or info.get('webpage_url')
 
             return {
                 "success": True,
