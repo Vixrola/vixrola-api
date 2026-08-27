@@ -51,7 +51,8 @@ def extract_video_info(url: str):
         'geo_bypass': True,
         'extractor_args': {
             'youtube': {
-                'player_client': ['tv', 'web_creator', 'ios', 'android']
+                'player_client': ['android', 'tv'],
+                'player_skip': ['webpage', 'configs']
             }
         }
     }
@@ -61,19 +62,17 @@ def extract_video_info(url: str):
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            # download=False ensures format parsing doesn't crash on strict format rules
             info = ydl.extract_info(url, download=False)
             
             download_url = None
             formats = info.get('formats', [])
             
-            # Best Progressive MP4 (Audio + Video)
+            # बेस्ट MP4 डाउनलोड लिंक ढूँढें
             for f in reversed(formats):
                 if f.get('url') and f.get('vcodec') != 'none' and f.get('acodec') != 'none':
                     download_url = f.get('url')
                     break
             
-            # Fallback to any valid direct stream URL
             if not download_url:
                 for f in reversed(formats):
                     if f.get('url'):
