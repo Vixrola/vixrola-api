@@ -91,3 +91,28 @@ Twitch, Likee, Kwai, Rumble, Bilibili, Triller, Moj, Josh, Chingari,
 ShareChat, Koo, Roposo, Public and Mitron.
 
 A domain being listed does not guarantee every URL/content type is supported by the current yt-dlp release. Private, login-required, DRM-protected, expired or restricted content cannot be bypassed.
+
+
+### Webshare proxy rotation
+
+Configure up to 10 proxies in Render Environment Variables:
+
+`WEBSHARE_PROXY_1` through `WEBSHARE_PROXY_10`
+
+Each value should be the complete proxy URL, for example:
+
+`http://USERNAME:PASSWORD@HOST:PORT`
+
+Optional settings:
+- `PROXY_COOLDOWN_SECONDS` (default: 300)
+- `PROXY_TEST_TIMEOUT_SECONDS` (default: 10)
+
+The `/download` endpoint tries available proxies round-robin. A failed proxy is placed in cooldown and another available proxy is tried.
+
+### Proxy connectivity test
+
+Open:
+
+`https://YOUR-RENDER-DOMAIN.onrender.com/proxy-test`
+
+This tests each configured proxy against `ipv4.webshare.io`, reports only the proxy number, status, latency and returned public IP, and never returns the proxy username/password or proxy URL.
