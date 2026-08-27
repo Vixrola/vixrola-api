@@ -49,9 +49,10 @@ def extract_video_info(url: str):
         'no_warnings': True,
         'nocheckcertificate': True,
         'geo_bypass': True,
+        'format': 'best/bestvideo+bestaudio/any',
         'extractor_args': {
             'youtube': {
-                'player_client': ['ios', 'android']
+                'player_client': ['tv', 'ios', 'android', 'web']
             }
         }
     }
@@ -61,25 +62,28 @@ def extract_video_info(url: str):
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            # extract_flat=False ensures all formats & direct URLs are extracted
             info = ydl.extract_info(url, download=False)
             
-            # बेस्ट डायरेक्ट डाउनलोड URL निकालना
-            download_url = None
             formats = info.get('formats', [])
-            
-            # 1. पहले वो वीडियो ढूँढें जिसमें वीडियो + ऑडियो दोनों हों (Progressive MP4)
-            combined_formats = [
-                f for f in formats 
-                if f.get('vcodec') != 'none' and f.get('acodec') != 'none' and f.get('url')
-            ]
-            
-            if combined_formats:
-                download_url = combined_formats[-1].get('url')
-            elif formats:
-                # 2. अगर कंबाइंड न मिले तो सबसे बेस्ट फॉर्मेट का URL
-                download_url = formats[-1].get('url')
-            else:
-                download_url = info.get('url')
+            download_url = info.get('url')
+
+            # 1. Look for progressive mp4 (video + audio combined)
+            if not download_url:
+                for f in reversed(formats):
+                    if f.get('url') and f.get('vcodec') != 'none' and f.get('acodec') != 'none':
+                        download_url = f.get('url')
+                        break
+
+            # 2. Fallback to any working direct stream URL
+            if not download_url and formats:
+                for f in reversed(formats):
+                    if f.get('url'):
+                        download_url = f.get('url')
+                        break
+
+            if not download_url:
+                download_url = info.get('webpage_url', url)
 
             return {
                 "success": True,
