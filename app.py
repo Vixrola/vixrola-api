@@ -49,10 +49,9 @@ def extract_video_info(url: str):
         'quiet': True,
         'no_warnings': True,
         'nocheckcertificate': True,
-        'geo_bypass': True,
         'extractor_args': {
             'youtube': {
-                'player_client': ['android', 'ios', 'mweb', 'tv']
+                'player_client': ['ios', 'android']
             }
         }
     }
