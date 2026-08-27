@@ -5,6 +5,9 @@ from urllib.parse import urlparse
 import os
 import time
 import threading
+import urllib.request
+import urllib.error
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 app = Flask(__name__)
 CORS(app)
@@ -176,6 +179,79 @@ def home():
 @app.get("/health")
 def health():
     return jsonify({"status": "ok", "proxy_pool": proxy_pool.status()})
+
+
+@app.get("/proxy-test")
+def proxy_test():
+    """Test each configured proxy against a fixed Webshare IP endpoint.
+
+    Credentials and proxy URLs are never returned. A successful test clears
+    the proxy cooldown; a failed test applies the normal cooldown.
+    """
+    if not proxy_pool.proxies:
+        return jsonify({
+            "status": "error",
+            "message": "No Webshare proxies are configured."
+        }), 503
+
+    target = "https://ipv4.webshare.io/"
+    timeout = max(3, min(20, int(os.getenv("PROXY_TEST_TIMEOUT_SECONDS", "10"))))
+
+    def test_one(index_proxy):
+        index, proxy = index_proxy
+        started = time.monotonic()
+        try:
+            handler = urllib.request.ProxyHandler({
+                "http": proxy,
+                "https": proxy,
+            })
+            opener = urllib.request.build_opener(handler)
+            request = urllib.request.Request(
+                target,
+                headers={"User-Agent": "VixRola-Proxy-Test/1.0"},
+            )
+            with opener.open(request, timeout=timeout) as response:
+                body = response.read(256).decode("utf-8", errors="replace").strip()
+            elapsed_ms = round((time.monotonic() - started) * 1000)
+            proxy_pool.mark_success(proxy)
+            return {
+                "proxy": index,
+                "status": "ok",
+                "http_status": getattr(response, "status", 200),
+                "ip": body if body else None,
+                "latency_ms": elapsed_ms,
+            }
+        except Exception as exc:
+            elapsed_ms = round((time.monotonic() - started) * 1000)
+            proxy_pool.mark_failed(proxy)
+            return {
+                "proxy": index,
+                "status": "failed",
+                "error": type(exc).__name__,
+                "latency_ms": elapsed_ms,
+            }
+
+    indexed = list(enumerate(proxy_pool.proxies, start=1))
+    results = []
+    workers = min(10, len(indexed))
+    with ThreadPoolExecutor(max_workers=workers) as executor:
+        futures = [executor.submit(test_one, item) for item in indexed]
+        for future in as_completed(futures):
+            results.append(future.result())
+
+    results.sort(key=lambda x: x["proxy"])
+    ok = sum(1 for item in results if item["status"] == "ok")
+    failed = len(results) - ok
+
+    return jsonify({
+        "status": "ok" if ok else "error",
+        "target": "ipv4.webshare.io",
+        "tested": len(results),
+        "working": ok,
+        "failed": failed,
+        "results": results,
+        "proxy_pool": proxy_pool.status(),
+    }), (200 if ok else 502)
 
 
 @app.route("/download", methods=["GET", "POST"])
