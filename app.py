@@ -49,6 +49,11 @@ def extract_video_info(url: str):
         'no_warnings': True,
         'nocheckcertificate': True,
         'geo_bypass': True,
+        'extractor_args': {
+            'youtube': {
+                'player_client': ['ios', 'tv_embedded']
+            }
+        }
     }
 
     if cookie_file:
@@ -61,13 +66,12 @@ def extract_video_info(url: str):
             download_url = None
             formats = info.get('formats', [])
             
-            # बेस्ट MP4 (Audio + Video कंबाइंड) ढूँढें
+            # Progressive MP4 (Audio + Video)
             for f in reversed(formats):
                 if f.get('url') and f.get('vcodec') != 'none' and f.get('acodec') != 'none':
                     download_url = f.get('url')
                     break
             
-            # अगर कंबाइंड न मिले तो कोई भी डायरेक्ट स्ट्रीमिंग URL
             if not download_url:
                 for f in reversed(formats):
                     if f.get('url'):
