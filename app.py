@@ -15,7 +15,6 @@ app.add_middleware(
 )
 
 def get_cookie_file():
-    """Render की Read-only फ़ाइल को /tmp में कॉपी करता है ताकि Write Error न आए"""
     secret_path = "/etc/secrets/cookies.txt"
     temp_path = "/tmp/cookies.txt"
     
@@ -50,9 +49,10 @@ def extract_video_info(url: str):
         'quiet': True,
         'no_warnings': True,
         'nocheckcertificate': True,
+        'geo_bypass': True,
         'extractor_args': {
             'youtube': {
-                'player_client': ['web', 'web_embedded', 'tv', 'android']
+                'player_client': ['android', 'ios', 'mweb', 'tv']
             }
         }
     }
