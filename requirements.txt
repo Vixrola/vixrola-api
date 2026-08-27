@@ -1,4 +1,5 @@
-fastapi
-uvicorn[standard]
+Flask
+flask-cors
 yt-dlp
-pydantic
+gunicorn
+curl-cffi
