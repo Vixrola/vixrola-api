@@ -2,10 +2,10 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import yt_dlp
 import os
+import shutil
 
 app = FastAPI(title="VixRola Universal Downloader API")
 
-# CORS Enable
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -14,20 +14,28 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-def get_cookie_path():
-    if os.path.exists("/etc/secrets/cookies.txt"):
-        return "/etc/secrets/cookies.txt"
+def get_cookie_file():
+    """Render की Read-only फ़ाइल को /tmp में कॉपी करता है ताकि Write Error न आए"""
+    secret_path = "/etc/secrets/cookies.txt"
+    temp_path = "/tmp/cookies.txt"
+    
+    if os.path.exists(secret_path):
+        try:
+            shutil.copyfile(secret_path, temp_path)
+            return temp_path
+        except Exception:
+            return secret_path
     elif os.path.exists("cookies.txt"):
         return "cookies.txt"
     return None
 
 @app.get("/")
 def home():
-    cookie_status = "Available" if get_cookie_path() else "Not Found"
+    secret_exists = os.path.exists("/etc/secrets/cookies.txt") or os.path.exists("cookies.txt")
     return {
         "status": "Online",
         "message": "VixRola Downloader API is running smoothly!",
-        "cookies_status": cookie_status
+        "cookies_status": "Available" if secret_exists else "Not Found"
     }
 
 @app.get("/extract")
@@ -35,15 +43,16 @@ def extract_video_info(url: str):
     if not url:
         raise HTTPException(status_code=400, detail="URL parameter is required")
 
-    cookie_file = get_cookie_path()
+    cookie_file = get_cookie_file()
 
     ydl_opts = {
         'format': 'best',
         'quiet': True,
         'no_warnings': True,
+        'nocheckcertificate': True,
         'extractor_args': {
             'youtube': {
-                'player_client': ['ios', 'android', 'web_embedded']
+                'player_client': ['web', 'web_embedded', 'tv', 'android']
             }
         }
     }
