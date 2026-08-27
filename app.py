@@ -45,10 +45,10 @@ def extract_video_info(url: str):
     cookie_file = get_cookie_file()
 
     ydl_opts = {
-        'format': 'best',
         'quiet': True,
         'no_warnings': True,
         'nocheckcertificate': True,
+        'geo_bypass': True,
         'extractor_args': {
             'youtube': {
                 'player_client': ['ios', 'android']
@@ -63,9 +63,23 @@ def extract_video_info(url: str):
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
             
-            download_url = info.get('url')
-            if not download_url and 'formats' in info:
-                download_url = info['formats'][-1].get('url')
+            # बेस्ट डायरेक्ट डाउनलोड URL निकालना
+            download_url = None
+            formats = info.get('formats', [])
+            
+            # 1. पहले वो वीडियो ढूँढें जिसमें वीडियो + ऑडियो दोनों हों (Progressive MP4)
+            combined_formats = [
+                f for f in formats 
+                if f.get('vcodec') != 'none' and f.get('acodec') != 'none' and f.get('url')
+            ]
+            
+            if combined_formats:
+                download_url = combined_formats[-1].get('url')
+            elif formats:
+                # 2. अगर कंबाइंड न मिले तो सबसे बेस्ट फॉर्मेट का URL
+                download_url = formats[-1].get('url')
+            else:
+                download_url = info.get('url')
 
             return {
                 "success": True,
