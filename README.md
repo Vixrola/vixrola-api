@@ -24,3 +24,14 @@ After deployment, verify:
 /health
 /proxy-test
 Then test a public TikTok, Dailymotion, and YouTube URL. Platform availability can still vary with yt-dlp changes, authentication, regional restrictions, rate limits, or DRM.
+V2 Platform/Proxy Update
+Decodo proxy is passed to yt-dlp through the DECODO_* environment variables.
+More robust yt-dlp format selection: bv*+ba/b.
+Adds curl-cffi for yt-dlp browser impersonation support required by some extractors.
+Keeps /health and /proxy-test.
+Render Environment Variables remain:
+DECODO_HOST
+DECODO_PORT
+DECODO_USERNAME
+DECODO_PASSWORD
+After deployment, verify /health, /proxy-test, then test TikTok, Dailymotion and YouTube public URLs.
