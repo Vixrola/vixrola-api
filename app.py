@@ -1,3 +1,4 @@
+import requests
 import os
 from flask import Flask, request, jsonify
 from flask_cors import CORS
@@ -131,6 +132,21 @@ def download():
         app.logger.exception("Extraction failed")
         return jsonify({"status":"error","message":"Extraction failed.",
                         "details":str(e)}), 500
+
+
+
+@app.route("/proxy-test", methods=["GET"])
+def proxy_test():
+    proxy = get_decodo_proxy()
+    if not proxy:
+        return {"status":"error","proxy_configured":False,"message":"Decodo environment variables are not configured"}, 500
+    try:
+        r = requests.get("https://api.ipify.org?format=json", proxies={"http":proxy,"https":proxy}, timeout=20)
+        r.raise_for_status()
+        data = r.json()
+        return {"status":"ok","proxy_configured":True,"proxy_ip":data.get("ip"),"message":"Decodo proxy connection is working"}
+    except Exception as e:
+        return {"status":"error","proxy_configured":True,"message":"Decodo proxy connection failed","error":str(e)[:500]}, 502
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
