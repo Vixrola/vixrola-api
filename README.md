@@ -16,3 +16,5 @@ DECODO_PORT=10001
 DECODO_USERNAME=your-username
 DECODO_PASSWORD=your-password
 Keep your real credentials private.
+Decodo Proxy Test
+After deployment open /proxy-test. A successful response shows proxy_configured: true and the proxy IP.
