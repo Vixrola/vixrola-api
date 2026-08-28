@@ -4,3 +4,4 @@ yt-dlp
 gunicorn
 
 requests
+curl-cffi
