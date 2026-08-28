@@ -99,7 +99,8 @@ def download():
 
     opts = {
         "quiet": True, "no_warnings": True, "skip_download": True,
-        "noplaylist": False, "extract_flat": False, "format": "best"
+        "noplaylist": False, "extract_flat": False, "format": "best",
+        "proxy": get_decodo_proxy()
     }
     try:
         with yt_dlp.YoutubeDL(opts) as ydl:
