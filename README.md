@@ -18,3 +18,9 @@ DECODO_PASSWORD=your-password
 Keep your real credentials private.
 Decodo Proxy Test
 After deployment open /proxy-test. A successful response shows proxy_configured: true and the proxy IP.
+Platform + Decodo update
+The /download endpoint passes the configured Decodo residential proxy to yt-dlp. TikTok, Dailymotion (dailymotion.com, dai.ly) and YouTube (youtube.com, youtu.be) are enabled in the domain allowlist.
+After deployment, verify:
+/health
+/proxy-test
+Then test a public TikTok, Dailymotion, and YouTube URL. Platform availability can still vary with yt-dlp changes, authentication, regional restrictions, rate limits, or DRM.
