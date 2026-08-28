@@ -1,3 +1,11 @@
+
+def decodo_ytdlp_options():
+    return {
+        "proxy": get_decodo_proxy(),
+        "format": "bv*+ba/b",
+        "merge_output_format": "mp4",
+    }
+
 import requests
 import os
 from flask import Flask, request, jsonify
