@@ -46,16 +46,17 @@ def ytdlp_options(url, download=False, output_template=None):
     opts = {
         "quiet": True,
         "no_warnings": True,
-        "retries": 3,
-        "fragment_retries": 3,
-        "socket_timeout": 30,
+        "retries": 2,
+        "fragment_retries": 2,
+        "socket_timeout": 15,
         "noplaylist": True,
         "extract_flat": False,
+        "concurrent_fragment_downloads": 8,
         "proxy": proxy_for_url(url),
     }
     if download:
         opts.update({
-            "format": "bv*+ba/b",
+            "format": "best[ext=mp4][vcodec!=none][acodec!=none]/best[vcodec!=none][acodec!=none]/bv*+ba/b",
             "merge_output_format": "mp4",
             "outtmpl": output_template,
             "restrictfilenames": True,
