@@ -305,7 +305,8 @@ async function handleDownload(req, res) {
 app.get('/download', handleDownload);
 app.post('/download', handleDownload);
 
-const PORT = 3000;
+// Use Render/cloud PORT if set, otherwise default to 3000 for AI Studio and local
+const PORT = process.env.PORT && process.env.PORT !== '8080' ? Number(process.env.PORT) : 3000;
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`VixRola API server listening on http://0.0.0.0:${PORT}`);
 });
