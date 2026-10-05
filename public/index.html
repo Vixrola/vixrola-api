@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VixRola API</title>
+  <meta name="description" content="VixRola Universal yt-dlp media extraction API">
+  <meta property="og:title" content="VixRola API">
+  <meta property="og:description" content="VixRola Universal yt-dlp media extraction API">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0b0f19;
+      --card-bg: #111827;
+      --card-border: #1f2937;
+      --accent: #3b82f6;
+      --accent-hover: #2563eb;
+      --accent-glow: rgba(59, 130, 246, 0.15);
+      --success: #10b981;
+      --error: #ef4444;
+      --text: #f3f4f6;
+      --text-muted: #9ca3af;
+      --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: var(--font-sans);
+      line-height: 1.6;
+      min-height: 100vh;
+      padding: 2rem 1rem;
+    }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+      padding-bottom: 1.5rem;
+      border-bottom: 1px solid var(--card-border);
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .logo-icon {
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 1.25rem;
+      color: #fff;
+      box-shadow: 0 4px 14px rgba(59, 130, 246, 0.4);
+    }
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.35rem 0.75rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      font-family: var(--font-mono);
+      background: rgba(16, 185, 129, 0.1);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.25);
+    }
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #10b981;
+      box-shadow: 0 0 8px #10b981;
+    }
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+    }
+    .card h2 {
+      font-size: 1.15rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .input-group {
+      display: flex;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+    }
+    input[type="url"] {
+      flex: 1;
+      padding: 0.85rem 1.1rem;
+      background: #0b0f19;
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      color: #fff;
+      font-family: var(--font-mono);
+      font-size: 0.9rem;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    input[type="url"]:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+    button {
+      padding: 0.85rem 1.5rem;
+      background: var(--accent);
+      color: white;
+      font-weight: 600;
+      font-size: 0.9rem;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: background 0.2s, transform 0.1s;
+    }
+    button:hover {
+      background: var(--accent-hover);
+    }
+    button:active {
+      transform: scale(0.98);
+    }
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    .preset-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+    .chip {
+      background: #1f2937;
+      color: var(--text-muted);
+      padding: 0.25rem 0.6rem;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-family: var(--font-mono);
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: all 0.2s;
+    }
+    .chip:hover {
+      color: #fff;
+      border-color: var(--accent);
+      background: #273548;
+    }
+    .response-container {
+      margin-top: 1rem;
+      display: none;
+    }
+    .response-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.5rem;
+      font-size: 0.85rem;
+      font-family: var(--font-mono);
+      color: var(--text-muted);
+    }
+    pre {
+      background: #080c14;
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      padding: 1rem;
+      font-family: var(--font-mono);
+      font-size: 0.825rem;
+      overflow-x: auto;
+      max-height: 400px;
+      color: #e2e8f0;
+    }
+    .endpoint-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+    .endpoint-item {
+      background: #0b0f19;
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      padding: 0.85rem 1.1rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+    }
+    .endpoint-left {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .method-get {
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      font-weight: 700;
+      font-size: 0.75rem;
+    }
+    .method-post {
+      background: rgba(59, 130, 246, 0.15);
+      color: #60a5fa;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      font-weight: 700;
+      font-size: 0.75rem;
+    }
+    .endpoint-desc {
+      color: var(--text-muted);
+      font-family: var(--font-sans);
+      font-size: 0.8rem;
+    }
+    .domains-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+      gap: 0.5rem;
+      margin-top: 0.75rem;
+    }
+    .domain-tag {
+      background: #0b0f19;
+      border: 1px solid var(--card-border);
+      padding: 0.4rem 0.6rem;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-family: var(--font-mono);
+      text-align: center;
+      color: #cbd5e1;
+    }
+    .spinner {
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      border-top-color: white;
+      border-radius: 50%;
+      width: 14px;
+      height: 14px;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    .video-preview {
+      margin-top: 1rem;
+      border-radius: 8px;
+      overflow: hidden;
+      background: #000;
+      max-width: 100%;
+    }
+    video {
+      width: 100%;
+      max-height: 400px;
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="brand">
+        <div class="logo-icon">V</div>
+        <div>
+          <h1>VixRola API</h1>
+          <p style="font-size: 0.8rem; color: var(--text-muted);">Universal Video Extraction Service</p>
+        </div>
+      </div>
+      <div class="badge" id="health-badge">
+        <span class="status-dot"></span>
+        <span id="health-text">v4 · ONLINE</span>
+      </div>
+    </header>
+
+    <!-- Test Console Card -->
+    <div class="card">
+      <h2>⚡ Live Download Console</h2>
+      <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">
+        Extract direct video streams, resolutions, and media links from supported platforms.
+      </p>
+
+      <div class="preset-chips">
+        <span style="font-size: 0.75rem; color: var(--text-muted); line-height: 24px;">Quick tests:</span>
+        <span class="chip" onclick="setUrl('https://www.instagram.com/p/C-example/')">Instagram</span>
+        <span class="chip" onclick="setUrl('https://twitter.com/example/status/123456789')">X / Twitter</span>
+        <span class="chip" onclick="setUrl('https://www.reddit.com/r/videos/comments/test/')">Reddit</span>
+        <span class="chip" onclick="setUrl('https://t.me/example/123')">Telegram</span>
+        <span class="chip" onclick="setUrl('https://www.pinterest.com/pin/123456789/')">Pinterest</span>
+      </div>
+
+      <div class="input-group">
+        <input type="url" id="url-input" placeholder="Enter video URL (e.g. https://instagram.com/...)" required>
+        <button id="extract-btn" onclick="testDownload()">
+          <span id="btn-text">Extract</span>
+        </button>
+      </div>
+
+      <div class="response-container" id="response-container">
+        <div class="response-header">
+          <span>RESPONSE (<span id="response-status">200 OK</span>)</span>
+          <span id="response-time"></span>
+        </div>
+        <div id="video-preview-wrapper" style="display: none; margin-bottom: 1rem;">
+          <video id="video-preview" controls></video>
+        </div>
+        <pre><code id="response-json"></code></pre>
+      </div>
+    </div>
+
+    <!-- API Reference Card -->
+    <div class="card">
+      <h2>📖 API Endpoints</h2>
+      <div class="endpoint-list">
+        <div class="endpoint-item">
+          <div class="endpoint-left">
+            <span class="method-get">GET</span>
+            <code>/</code>
+          </div>
+          <span class="endpoint-desc">Service status and version</span>
+        </div>
+        <div class="endpoint-item">
+          <div class="endpoint-left">
+            <span class="method-get">GET</span>
+            <code>/health</code>
+          </div>
+          <span class="endpoint-desc">Healthcheck & yt-dlp version info</span>
+        </div>
+        <div class="endpoint-item">
+          <div class="endpoint-left">
+            <span class="method-get">GET</span>
+            <code>/download?url={video_url}</code>
+          </div>
+          <span class="endpoint-desc">Extract video formats and download link</span>
+        </div>
+        <div class="endpoint-item">
+          <div class="endpoint-left">
+            <span class="method-post">POST</span>
+            <code>/download</code>
+          </div>
+          <span class="endpoint-desc">Extract via JSON body <code>{"url": "..."}</code></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Supported Domains Card -->
+    <div class="card">
+      <h2>🌐 Supported Platforms</h2>
+      <p style="font-size: 0.85rem; color: var(--text-muted);">
+        The following domains are enabled for extraction:
+      </p>
+      <div class="domains-grid">
+        <div class="domain-tag">Instagram</div>
+        <div class="domain-tag">Facebook / fb.watch</div>
+        <div class="domain-tag">X / Twitter</div>
+        <div class="domain-tag">Pinterest / pin.it</div>
+        <div class="domain-tag">Reddit / redd.it</div>
+        <div class="domain-tag">Snapchat</div>
+        <div class="domain-tag">Telegram (t.me)</div>
+        <div class="domain-tag">LinkedIn</div>
+        <div class="domain-tag">Moj (mojapp.in)</div>
+        <div class="domain-tag">Josh (joshapp.com)</div>
+        <div class="domain-tag">YouTube</div>
+        <div class="domain-tag">TikTok</div>
+        <div class="domain-tag">Threads</div>
+        <div class="domain-tag">Vimeo</div>
+        <div class="domain-tag">Dailymotion</div>
+        <div class="domain-tag">Twitch</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function setUrl(url) {
+      document.getElementById('url-input').value = url;
+    }
+
+    async function checkHealth() {
+      try {
+        const res = await fetch('/health');
+        if (res.ok) {
+          const data = await res.json();
+          document.getElementById('health-text').textContent = `v${data.version} · yt-dlp ${data.yt_dlp_version}`;
+        }
+      } catch (e) {
+        document.getElementById('health-text').textContent = 'API ONLINE';
+      }
+    }
+    checkHealth();
+
+    async function testDownload() {
+      const urlInput = document.getElementById('url-input');
+      const url = urlInput.value.trim();
+      if (!url) {
+        alert('Please enter a URL');
+        return;
+      }
+
+      const btn = document.getElementById('extract-btn');
+      const btnText = document.getElementById('btn-text');
+      const container = document.getElementById('response-container');
+      const jsonElem = document.getElementById('response-json');
+      const statusElem = document.getElementById('response-status');
+      const timeElem = document.getElementById('response-time');
+      const videoWrapper = document.getElementById('video-preview-wrapper');
+      const videoPreview = document.getElementById('video-preview');
+
+      btn.disabled = true;
+      btnText.innerHTML = '<span class="spinner"></span> Extracting...';
+      container.style.display = 'block';
+      jsonElem.textContent = 'Contacting extractor...';
+      videoWrapper.style.display = 'none';
+
+      const startTime = performance.now();
+
+      try {
+        const res = await fetch(`/download?url=${encodeURIComponent(url)}`);
+        const elapsed = Math.round(performance.now() - startTime);
+        timeElem.textContent = `${elapsed}ms`;
+        statusElem.textContent = `${res.status} ${res.statusText}`;
+
+        const data = await res.json();
+        jsonElem.textContent = JSON.stringify(data, null, 2);
+
+        if (data.download_url && data.download_url.startsWith('http')) {
+          videoPreview.src = data.download_url;
+          videoWrapper.style.display = 'block';
+        }
+      } catch (err) {
+        statusElem.textContent = 'Error';
+        jsonElem.textContent = JSON.stringify({ error: err.message }, null, 2);
+      } finally {
+        btn.disabled = false;
+        btnText.textContent = 'Extract';
+      }
+    }
+  </script>
+</body>
+</html>

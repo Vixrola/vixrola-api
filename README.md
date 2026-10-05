@@ -1,14 +1,32 @@
-VixRola Universal yt-dlp API
+# VixRola Universal Media Extraction API
 
-Enabled domains: Facebook, Instagram, YouTube, TikTok, X/Twitter, Snapchat,
-Telegram, Pinterest, LinkedIn, Reddit, Threads, Discord, Tumblr, Vimeo,
-Dailymotion, Twitch, Likee, Kwai, Rumble, Bilibili, Triller, Moj, Josh,
-Chingari, ShareChat, Koo, Roposo, Public and Mitron.
+A fast, lightweight media extraction API and live web console powered by Node.js and yt-dlp.
 
-A domain being listed does not guarantee every URL/content type is supported
-by the current yt-dlp release. Private, login-required, DRM-protected,
-expired or restricted content cannot be bypassed.
+## Supported Domains
+Instagram, Facebook, X (Twitter), Pinterest, Reddit, Snapchat, Telegram, LinkedIn, Moj, Josh, YouTube, TikTok, Threads, Discord, Tumblr, Vimeo, Dailymotion, Twitch, and more.
 
-Render:
-Build: pip install -r requirements.txt
-Start: gunicorn app:app --bind 0.0.0.0:$PORT
+## API Endpoints
+
+- `GET /` - Service status or interactive web test console
+- `GET /health` - Healthcheck & yt-dlp version info
+- `GET /download?url={video_url}` - Extract video streams and download link
+- `POST /download` - Extract via JSON body: `{"url": "https://..."}`
+
+## Installation & Running Locally
+
+```bash
+# Install dependencies (automatically sets up yt-dlp)
+npm install
+
+# Start development server
+npm run dev
+
+# Start production server
+npm start
+```
+
+## Deployment (Render / Railway / VPS / Cloud Run)
+
+- **Build Command**: `npm install`
+- **Start Command**: `npm start`
+- **Port**: `3000` (or set via `PORT` environment variable)

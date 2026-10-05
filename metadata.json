@@ -1,0 +1,8 @@
+{
+  "name": "VixRola API",
+  "description": "VixRola Universal yt-dlp media extraction API",
+  "permissions": [],
+  "capabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
